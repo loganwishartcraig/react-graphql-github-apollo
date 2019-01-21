@@ -2,48 +2,40 @@ import React from 'react';
 import { Query } from 'react-apollo';
 import gql from 'graphql-tag';
 import Loading from '../../components/Loading';
-import RepositoryList from '../Repository/RepositoryList';
 import ErrorMessage from '../../components/Error';
+import RepositoryList, { REPOSITORY_FRAGMENT } from '../Repository';
 
 const GET_REPOSITORIES_OF_CURRENT_USER = gql`
-    {
-        viewer {
-            repositories(
-                first: 5
-                orderBy: { direction: DESC, field: STARGAZERS }
-            ) {
-                edges {
-                    node {
-                        id
-                        name
-                        url
-                        descriptionHTML
-                        primaryLanguage {
-                            name
-                        }
-                        owner {
-                            login
-                            url
-                        }
-                        stargazers {
-                            totalCount
-                        }
-                        viewerHasStarred
-                        watchers {
-                            totalCount
-                        }
-                        viewerSubscription
-                    }
+query($cursor: String) {
+    viewer {
+        repositories(
+            first: 5
+            orderBy: { direction: DESC, field: STARGAZERS }
+            after: $cursor
+        ) {
+            edges {
+                node {
+                    ...repository
                 }
+            }
+            pageInfo {
+                endCursor
+                hasNextPage
             }
         }
     }
+}
+
+    ${REPOSITORY_FRAGMENT}
 `;
 
 const Profile = () => (
 
-    <Query query={GET_REPOSITORIES_OF_CURRENT_USER}>
-        {({ data, loading, error }) => {
+    <Query
+        query={GET_REPOSITORIES_OF_CURRENT_USER}
+        notifyOnNetworkStatusChange={true}
+    >
+        {({ data, loading, error, fetchMore }) => {
 
             if (error) {
                 return <ErrorMessage error={error} />
@@ -51,12 +43,17 @@ const Profile = () => (
 
             const { viewer } = data;
 
-            if (loading || !viewer) {
+            if (loading && !viewer) {
                 return <Loading />;
             }
 
             return (
-                <RepositoryList repositories={viewer.repositories} />
+                <RepositoryList
+                    repositories={viewer.repositories}
+                    fetchMore={fetchMore}
+                    loading={loading}
+                    entry={'viewer'}
+                />
             );
 
         }}
