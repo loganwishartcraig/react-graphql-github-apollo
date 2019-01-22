@@ -5,6 +5,14 @@ import Loading from '../../../components/Loading';
 import { Query } from 'react-apollo';
 import IssueItem from '../IssueItem';
 
+const ISSUE_STATES = {
+    NONE: 'NONE',
+    OPEN: 'OPEN',
+    CLOSED: 'CLOSED'
+};
+
+const isShow = issueState => issueState !== ISSUE_STATES.NONE;
+
 const GET_ISSUES_OF_REPOSITORY = gql`
     query($repositoryOwner: String!, $repositoryName: String!) {
         repository(name: $repositoryName, owner: $repositoryOwner) {
@@ -24,40 +32,54 @@ const GET_ISSUES_OF_REPOSITORY = gql`
     }
 `;
 
-const Issues = ({
-    repositoryOwner,
-    repositoryName
-}) => (
-        <div className="Issues">
-            <Query
-                query={GET_ISSUES_OF_REPOSITORY}
-                variables={{
-                    repositoryName,
-                    repositoryOwner
-                }}
-            >
-                {({ data, loading, error }) => {
+class Issues extends React.Component {
 
-                    if (error) {
-                        return <ErrorMessage error={error}></ErrorMessage>
-                    }
+    state = {
+        issueState: ISSUE_STATES.NONE
+    }
 
-                    const { repository } = data;
+    render() {
 
-                    if (loading && !repository) {
-                        return <Loading />;
-                    }
+        const { issueState } = this.state;
+        const { repositoryName, repositoryOwner } = this.props;
 
-                    if (!repository.issues.edges.length) {
-                        return <div className="IssueList">No issues...</div>;
-                    }
+        return (
+            <div className="Issues">
 
-                    return <IssueList issues={repository.issues} />;
+                {isShow(issueState) && (
+                    <Query
+                        query={GET_ISSUES_OF_REPOSITORY}
+                        variables={{
+                            repositoryName,
+                            repositoryOwner
+                        }}
+                    >
+                        {({ data, loading, error }) => {
 
-                }}
-            </Query>
-        </div>
-    );
+                            if (error) {
+                                return <ErrorMessage error={error}></ErrorMessage>
+                            }
+
+                            const { repository } = data;
+
+                            if (loading && !repository) {
+                                return <Loading />;
+                            }
+
+                            if (!repository.issues.edges.length) {
+                                return <div className="IssueList">No issues...</div>;
+                            }
+
+                            return <IssueList issues={repository.issues} />;
+
+                        }}
+                    </Query>
+                )}
+
+            </div>
+        )
+    };
+}
 
 const IssueList = ({ issues }) => (
     <div className="IssueList">
